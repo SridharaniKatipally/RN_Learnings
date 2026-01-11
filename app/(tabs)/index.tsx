@@ -1,4 +1,4 @@
-// File: SAPP/app/(tabs)/index.tsx
+
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
@@ -13,16 +13,16 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-// Import your component
+// Import component
 import TransactionCard from '../../components/TransactionCard';
-// 👇 IMPORT THE STORE (The connection to the brain)
+// IMPORT THE STORE (The connection to the brain)
 import { useTransactionStore } from '../../store/transactionStore';
 
 export default function HomeScreen() {
-  // 🟢 1. GET DATA FROM STORE (Global State)
+  //  1. GET DATA FROM STORE (Global State)
   const { transactions, addTransaction, deleteTransaction } = useTransactionStore();
 
-  // 🔵 2. LOCAL STATE (For the Modal Inputs)
+  //  2. LOCAL STATE (For the Modal Inputs)
   const [isModalVisible, setModalVisible] = useState(false);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
