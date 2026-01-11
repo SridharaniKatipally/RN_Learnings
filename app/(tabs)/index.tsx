@@ -1,98 +1,146 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+// File: SAPP/app/(tabs)/index.tsx
+import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import {
+  Alert,
+  Button,
+  FlatList,
+  Image,
+  Modal,
+  SafeAreaView, StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+// Import your component
+import TransactionCard from '../../components/TransactionCard';
+// 👇 IMPORT THE STORE (The connection to the brain)
+import { useTransactionStore } from '../../store/transactionStore';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  // 🟢 1. GET DATA FROM STORE (Global State)
+  const { transactions, addTransaction, deleteTransaction } = useTransactionStore();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  // 🔵 2. LOCAL STATE (For the Modal Inputs)
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [title, setTitle] = useState('');
+  const [amount, setAmount] = useState('');
+
+  // 3. HANDLE SAVE (Send data to Store)
+  const handleSave = () => {
+    if (!title || !amount) {
+      Alert.alert('Error', 'Please enter both title and amount');
+      return;
+    }
+    
+    // Call the global action
+    addTransaction(title, amount);
+    
+    // Reset the form
+    setTitle('');
+    setAmount('');
+    setModalVisible(false);
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Image 
+          source={{ uri: 'https://reactnative.dev/img/tiny_logo.png' }} 
+          style={styles.logo} 
+        />
+        <Text style={styles.headerText}>Hello Spendlyt</Text>
+      </View>
+
+      {/* Body: Displays the Transactions from Store */}
+      <View style={styles.content}>
+        {transactions.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No transactions yet.</Text>
+            <Text style={styles.emptySubText}>Tap the + button to add one!</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={transactions}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              // Long press to delete
+              <TouchableOpacity onLongPress={() => deleteTransaction(item.id)}>
+                <TransactionCard
+                  title={item.title}
+                  amount={item.amount}
+                  date={item.date}
+                  icon={item.icon}
+                />
+              </TouchableOpacity>
+            )}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
+
+      {/* Floating Add Button */}
+      <TouchableOpacity 
+        style={styles.fab} 
+        onPress={() => setModalVisible(true)}
+      >
+        <Ionicons name="add" size={30} color="white" />
+      </TouchableOpacity>
+
+      {/* Modal Popup */}
+      <Modal visible={isModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>New Transaction</Text>
+            
+            <TextInput 
+              placeholder="Title (e.g. Coffee)" 
+              style={styles.input}
+              value={title}
+              onChangeText={setTitle}
+            />
+            
+            <TextInput 
+              placeholder="Amount (e.g. -500)" 
+              style={styles.input}
+              keyboardType="numeric"
+              value={amount}
+              onChangeText={setAmount}
+            />
+
+            <View style={styles.buttonRow}>
+              <Button title="Cancel" color="red" onPress={() => setModalVisible(false)} />
+              <Button title="Save" onPress={handleSave} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { flex: 1, backgroundColor: '#000' },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 20 },
+  logo: { width: 40, height: 40, borderRadius: 20 },
+  headerText: { color: '#fff', fontSize: 22, fontWeight: '700', marginLeft: 15 },
+  content: { flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 25 },
+  emptyContainer: { alignItems: 'center', marginTop: 50 },
+  emptyText: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  emptySubText: { fontSize: 14, color: '#888', marginTop: 5 },
+  fab: {
+    position: 'absolute', bottom: 30, right: 30, backgroundColor: '#000',
+    width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center',
+    elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3, shadowRadius: 3,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: '85%', backgroundColor: 'white', padding: 20, borderRadius: 20, elevation: 5 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 12, padding: 12, marginBottom: 15, fontSize: 16 },
+  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
 });
