@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 // SAPP/app/(tabs)/index.tsx
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
+=======
+
+import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+>>>>>>> 62ec5a9d28bc8101cd27961924397b6ccd0c2f69
 import {
   ActivityIndicator,
   Alert,
@@ -143,6 +149,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginLeft: 15,
   },
+<<<<<<< HEAD
   content: {
     flex: 1,
     backgroundColor: "#fff",
@@ -197,4 +204,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 10,
   },
+=======
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: '85%', backgroundColor: 'white', padding: 20, borderRadius: 20, elevation: 5 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 12, padding: 12, marginBottom: 15, fontSize: 16 },
+  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+>>>>>>> 62ec5a9d28bc8101cd27961924397b6ccd0c2f69
 });
