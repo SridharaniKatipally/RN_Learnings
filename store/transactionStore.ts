@@ -1,9 +1,9 @@
-// File: SAPP/store/transactionStore.ts
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+// SAPP/store/transactionStore.ts
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { fetchTransactionsAPI } from "../services/mockData";
 
-// 1. Define the shape of a single Transaction
 export type Transaction = {
   id: string;
   title: string;
@@ -12,48 +12,72 @@ export type Transaction = {
   icon: string;
 };
 
-// 2. Define the Store Actions (aligned with "Domain Logic" [cite: 101])
 type TransactionState = {
   transactions: Transaction[];
+  isLoading: boolean;
+
   addTransaction: (title: string, amount: string) => void;
   deleteTransaction: (id: string) => void;
+  loadMockData: () => Promise<void>;
 };
 
-// 3. Create the Store with Persistence (aligned with "Local Storage" [cite: 10])
 export const useTransactionStore = create<TransactionState>()(
   persist(
     (set) => ({
-      transactions: [], // Initial Empty State
+      transactions: [],
+      isLoading: false,
 
-      // ACTION: Add a new transaction
       addTransaction: (title, amount) => {
         const newTransaction: Transaction = {
           id: Date.now().toString(),
           title: title,
           amount: parseFloat(amount),
           date: new Date().toLocaleDateString(),
-          // Simple logic to choose icon based on income/expense
-          icon: parseFloat(amount) > 0 
-            ? 'https://img.icons8.com/color/48/money-bag.png' 
-            : 'https://img.icons8.com/color/48/coffee-to-go.png', 
+          icon:
+            parseFloat(amount) > 0
+              ? "https://img.icons8.com/color/48/money-bag.png"
+              : "https://img.icons8.com/color/48/coffee-to-go.png",
         };
-
         set((state) => ({
-          // Immutability: Create new array, don't mutate old one
           transactions: [newTransaction, ...state.transactions],
         }));
       },
 
-      // ACTION: Delete a transaction
       deleteTransaction: (id) => {
         set((state) => ({
           transactions: state.transactions.filter((t) => t.id !== id),
         }));
       },
+
+      // ✨ UPDATED: Safer Loading Logic
+      loadMockData: async () => {
+        set({ isLoading: true });
+        console.log("1.Loading Data...");
+        try {
+          const data = await fetchTransactionsAPI();
+          console.log("2. Data Arrived from Server!");
+
+          // Generate unique IDs for the new items
+          const uniqueData = data.map((item: any) => ({
+            ...item,
+            id: Math.random().toString(), // Give it a random ID
+          }));
+
+          set((state) => ({
+            transactions: [...uniqueData, ...state.transactions],
+            isLoading: false,
+          }));
+          console.log("3. State Updated!");
+        } catch (error) {
+          console.error("Error fetching data:", error);
+          set({ isLoading: false });
+        }
+      },
     }),
     {
-      name: 'spendlyt-storage', // Unique name for storage
-      storage: createJSONStorage(() => AsyncStorage), // Connect to phone disk
-    }
-  )
+      name: "spendlyt-storage",
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ transactions: state.transactions }),
+    },
+  ),
 );

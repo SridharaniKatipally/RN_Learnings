@@ -1,3 +1,4 @@
+// SAPP/components/TransactionCard.tsx
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
@@ -13,13 +14,18 @@ export default function TransactionCard({ title, amount, date, icon }: Transacti
   
   return (
     <View style={styles.card}>
+      {/* 1. The Icon (Fixed Size) */}
       <Image source={{ uri: icon }} style={styles.cardIcon} />
       
-      <View style={styles.cardTextContainer}>
-        <Text style={styles.cardTitle}>{title}</Text>
+      {/* 2. The Text (Flexible - Takes remaining space) */}
+      <View style={styles.textContainer}>
+        <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">
+          {title}
+        </Text>
         <Text style={styles.cardDate}>{date}</Text>
       </View>
       
+      {/* 3. The Amount (Fixed - Never shrinks) */}
       <Text style={[
         styles.cardAmount, 
         { color: isIncome ? '#2ecc71' : '#000' }
@@ -32,33 +38,39 @@ export default function TransactionCard({ title, amount, date, icon }: Transacti
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: '#f8f9fa',
+    flexDirection: 'row', // Align children in a row
+    alignItems: 'center', // Center vertically
+    marginBottom: 12,
+    padding: 16,
+    backgroundColor: '#fff',
     borderRadius: 16,
+    elevation: 2, // Shadow
   },
   cardIcon: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     marginRight: 16,
+    backgroundColor: '#f0f0f0',
   },
-  cardTextContainer: {
-    flex: 1,
+  textContainer: {
+    flex: 1, // ✨ MAGIC: This tells text to fill gap but stop before price
+    marginRight: 10,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1a1a1a',
+    marginBottom: 4,
   },
   cardDate: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#8e8e93',
-    marginTop: 4,
   },
   cardAmount: {
     fontSize: 16,
     fontWeight: '700',
+    minWidth: 70,
+    textAlign: 'right',
   },
 });
