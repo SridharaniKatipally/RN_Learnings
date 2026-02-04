@@ -1,7 +1,16 @@
 // SAPP/services/mockData.ts
 
+//  1. Type Definition
+export type Transaction = {
+  id: string;
+  title: string;
+  amount: number;
+  date: string;
+  icon: string;
+};
+
 // This mimics exactly what the Backend API will eventually send us
-export const MOCK_TRANSACTIONS = [
+export const MOCK_TRANSACTIONS: Transaction[] = [
   {
     id: "101",
     title: "Spotify Premium Subscription",
@@ -25,11 +34,19 @@ export const MOCK_TRANSACTIONS = [
   },
 ];
 
-// This simulates a network call that takes 1.5 seconds
-export const fetchTransactionsAPI = async () => {
-  return new Promise((resolve) => {
+export const fetchTransactionsAPI = (): Promise<Transaction[]> => {
+  return new Promise((resolve, reject) => {
     setTimeout(() => {
-      resolve(MOCK_TRANSACTIONS);
-    }, 1500); // 1.5 second delay
+      // 🎲 Revert to Random: 20% chance to fail, 80% success
+      const shouldFail = Math.random() > 0.8;
+
+      if (shouldFail) {
+        console.log("🔥 API Failed!");
+        reject("Network Error: Could not fetch transactions.");
+      } else {
+        console.log("✅ API Success!");
+        resolve(MOCK_TRANSACTIONS);
+      }
+    }, 1500);
   });
 };

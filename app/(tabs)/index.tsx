@@ -1,28 +1,27 @@
-<<<<<<< HEAD
 // SAPP/app/(tabs)/index.tsx
 import { Ionicons } from "@expo/vector-icons";
+import { Link } from "expo-router";
 import React, { useEffect, useState } from "react";
-=======
-
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
->>>>>>> 62ec5a9d28bc8101cd27961924397b6ccd0c2f69
 import {
   ActivityIndicator,
   Alert,
-  Button,
   FlatList,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import TransactionCard from "../../components/TransactionCard";
 import { useTransactionStore } from "../../store/transactionStore";
+
+// 👇 IMPORT YOUR NEW COMPONENTS
+import MyButton from "../../components/MyButton";
+import MyInput from "../../components/MyInput";
 
 export default function HomeScreen() {
   const {
@@ -31,28 +30,101 @@ export default function HomeScreen() {
     deleteTransaction,
     loadMockData,
     isLoading,
+    isSaving,
+    error,
   } = useTransactionStore();
 
   const [isModalVisible, setModalVisible] = useState(false);
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
+  const [errors, setErrors] = useState<{ title?: string; amount?: string }>({});
+  const [type, setType] = useState<"income" | "expense">("expense");
 
-  // ✨ Week 3: Trigger the API call when screen loads
   useEffect(() => {
-    if (transactions.length === 0) {
-      loadMockData();
-    }
-  }, []); // [] means "Run only once"
+    if (transactions.length === 0) loadMockData();
+  }, []);
 
-  const handleSave = () => {
-    if (!title || !amount) {
-      Alert.alert("Error", "Please enter both title and amount");
-      return;
+  useEffect(() => {
+    if (error) Alert.alert("Oops!", error, [{ text: "OK" }]);
+  }, [error]);
+
+  const validate = (): boolean => {
+    let valid = true;
+    let newErrors: { title?: string; amount?: string } = {};
+
+    if (!title.trim()) {
+      newErrors.title = "Title is required";
+      valid = false;
     }
-    addTransaction(title, amount);
+
+    const numberAmount = parseFloat(amount);
+    if (!amount || isNaN(numberAmount) || numberAmount <= 0) {
+      newErrors.amount = "Enter a valid positive amount";
+      valid = false;
+    }
+
+    setErrors(newErrors);
+    return valid;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+
+    const finalAmount = parseFloat(amount);
+    const amountToSend = type === "expense" ? -finalAmount : finalAmount;
+
+    await addTransaction(title, amountToSend.toString());
+
+    resetForm();
+    setModalVisible(false);
+  };
+
+  const resetForm = () => {
     setTitle("");
     setAmount("");
-    setModalVisible(false);
+    setErrors({});
+    setType("expense");
+  };
+
+  const renderContent = () => {
+    if (isLoading && transactions.length === 0) {
+      return (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#000" />
+          <Text style={{ marginTop: 10, color: "gray" }}>Syncing...</Text>
+        </View>
+      );
+    }
+
+    if (transactions.length === 0) {
+      return (
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>No transactions yet.</Text>
+          <MyButton title="Reload Data" onPress={loadMockData} />
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={transactions}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity onLongPress={() => deleteTransaction(item.id)}>
+            <TransactionCard
+              title={item.title}
+              amount={item.amount}
+              date={item.date}
+              icon={item.icon}
+            />
+          </TouchableOpacity>
+        )}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        refreshing={isLoading}
+        onRefresh={loadMockData}
+      />
+    );
   };
 
   return (
@@ -62,78 +134,110 @@ export default function HomeScreen() {
           source={{ uri: "https://reactnative.dev/img/tiny_logo.png" }}
           style={styles.logo}
         />
-        <Text style={styles.headerText}>Hello Spendlyt</Text>
+        <Link href="/gallery">
+          <Text style={styles.headerText}>Hello Spendlyt</Text>
+        </Link>
       </View>
 
-      <View style={styles.content}>
-        {/* ✨ Week 3: Show Spinner logic */}
-        {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color="#000" />
-            <Text style={{ marginTop: 10, color: "gray" }}>
-              Syncing with Bank...
-            </Text>
-          </View>
-        ) : transactions.length === 0 ? (
-          <View style={styles.center}>
-            <Text style={styles.emptyText}>No transactions yet.</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={transactions}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity onLongPress={() => deleteTransaction(item.id)}>
-                <TransactionCard
-                  title={item.title}
-                  amount={item.amount}
-                  date={item.date}
-                  icon={item.icon}
-                />
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={{ paddingBottom: 100 }}
-            showsVerticalScrollIndicator={false}
-            refreshing={isLoading} // Show the spinner in the list header
-            onRefresh={loadMockData} // Call the API again when pulled
-          />
-        )}
-      </View>
+      <View style={styles.content}>{renderContent()}</View>
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => setModalVisible(true)}
+        onPress={() => {
+          resetForm();
+          setModalVisible(true);
+        }}
       >
         <Ionicons name="add" size={30} color="white" />
       </TouchableOpacity>
 
       <Modal visible={isModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>New Transaction</Text>
-            <TextInput
-              placeholder="Title"
-              style={styles.input}
+
+            {/* Custom Toggle (We didn't componentize this yet) */}
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  type === "expense" && styles.expenseActive,
+                ]}
+                onPress={() => setType("expense")}
+              >
+                <Text
+                  style={[
+                    styles.toggleText,
+                    type === "expense" && styles.activeText,
+                  ]}
+                >
+                  Expense
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  type === "income" && styles.incomeActive,
+                ]}
+                onPress={() => setType("income")}
+              >
+                <Text
+                  style={[
+                    styles.toggleText,
+                    type === "income" && styles.activeText,
+                  ]}
+                >
+                  Income
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* 👇 REPLACED: MyInput handles the label, input, and error logic */}
+            <MyInput
+              label="Title"
+              placeholder="e.g. Spotify"
               value={title}
               onChangeText={setTitle}
+              error={errors.title}
             />
-            <TextInput
-              placeholder="Amount"
-              style={styles.input}
+
+            <MyInput
+              label="Amount"
+              placeholder="0.00"
               keyboardType="numeric"
               value={amount}
               onChangeText={setAmount}
+              error={errors.amount}
             />
+
             <View style={styles.buttonRow}>
-              <Button
-                title="Cancel"
-                color="red"
-                onPress={() => setModalVisible(false)}
-              />
-              <Button title="Save" onPress={handleSave} />
+              {/* 👇 REPLACED: Outline Button for Cancel */}
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <MyButton
+                  title="Cancel"
+                  variant="outline"
+                  onPress={() => {
+                    resetForm();
+                    setModalVisible(false);
+                  }}
+                />
+              </View>
+
+              {/* 👇 REPLACED: Primary Button handles loading spinner automatically! */}
+              <View style={{ flex: 1 }}>
+                <MyButton
+                  title="Save"
+                  onPress={handleSave}
+                  isLoading={isSaving}
+                />
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -149,7 +253,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginLeft: 15,
   },
-<<<<<<< HEAD
   content: {
     flex: 1,
     backgroundColor: "#fff",
@@ -158,8 +261,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 25,
   },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" }, // Helper for centering
-  emptyText: { fontSize: 18, fontWeight: "bold", color: "#333" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 20,
+  },
   fab: {
     position: "absolute",
     bottom: 30,
@@ -191,24 +299,36 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     textAlign: "center",
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 15,
-    fontSize: 16,
-  },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 10,
   },
-=======
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { width: '85%', backgroundColor: 'white', padding: 20, borderRadius: 20, elevation: 5 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 12, padding: 12, marginBottom: 15, fontSize: 16 },
-  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
->>>>>>> 62ec5a9d28bc8101cd27961924397b6ccd0c2f69
+  toggleContainer: {
+    flexDirection: "row",
+    marginBottom: 20,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 12,
+    padding: 4,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 10,
+  },
+  expenseActive: {
+    backgroundColor: "#ff4d4d",
+  },
+  incomeActive: {
+    backgroundColor: "#2ecc71",
+  },
+  toggleText: {
+    fontWeight: "600",
+    color: "#666",
+  },
+  activeText: {
+    color: "white",
+    fontWeight: "bold",
+  },
 });

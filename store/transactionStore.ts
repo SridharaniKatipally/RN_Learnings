@@ -15,8 +15,10 @@ export type Transaction = {
 type TransactionState = {
   transactions: Transaction[];
   isLoading: boolean;
+  isSaving: boolean;
+  error: string | null;
 
-  addTransaction: (title: string, amount: string) => void;
+  addTransaction: (title: string, amount: string) => Promise<void>;
   deleteTransaction: (id: string) => void;
   loadMockData: () => Promise<void>;
 };
@@ -26,20 +28,29 @@ export const useTransactionStore = create<TransactionState>()(
     (set) => ({
       transactions: [],
       isLoading: false,
+      isSaving: false,
+      error: null,
 
-      addTransaction: (title, amount) => {
+      addTransaction: async (title, amount) => {
+        set({ isSaving: true });
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const numAmount = parseFloat(amount);
         const newTransaction: Transaction = {
           id: Date.now().toString(),
           title: title,
-          amount: parseFloat(amount),
+          amount: numAmount,
           date: new Date().toLocaleDateString(),
           icon:
-            parseFloat(amount) > 0
+            numAmount > 0
               ? "https://img.icons8.com/color/48/money-bag.png"
               : "https://img.icons8.com/color/48/coffee-to-go.png",
         };
+
         set((state) => ({
           transactions: [newTransaction, ...state.transactions],
+          isSaving: false,
         }));
       },
 
@@ -49,28 +60,31 @@ export const useTransactionStore = create<TransactionState>()(
         }));
       },
 
-      // ✨ UPDATED: Safer Loading Logic
       loadMockData: async () => {
-        set({ isLoading: true });
-        console.log("1.Loading Data...");
+        set({ isLoading: true, error: null });
+        console.log("1. Loading Data...");
+
         try {
           const data = await fetchTransactionsAPI();
-          console.log("2. Data Arrived from Server!");
+          console.log("2. Data Arrived!");
 
-          // Generate unique IDs for the new items
           const uniqueData = data.map((item: any) => ({
             ...item,
-            id: Math.random().toString(), // Give it a random ID
+            id: Math.random().toString(),
           }));
 
+          // 👇 FIXED: Replace the list instead of appending
           set((state) => ({
-            transactions: [...uniqueData, ...state.transactions],
+            transactions: uniqueData,
             isLoading: false,
           }));
-          console.log("3. State Updated!");
-        } catch (error) {
-          console.error("Error fetching data:", error);
-          set({ isLoading: false });
+          console.log("3. Success!");
+        } catch (error: any) {
+          console.error("🔥 Store Caught Error:", error);
+          set({
+            error: error.toString() || "Something went wrong",
+            isLoading: false,
+          });
         }
       },
     }),
